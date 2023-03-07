@@ -1,10 +1,10 @@
-FROM maven:3.6.1-jdk-8-alpine AS MAVEN_TOOL_CHAIN
-COPY pom.xml /tmp/
-COPY src /tmp/src/
-WORKDIR /tmp/
-RUN mvn package
+FROM gradle:8.0.2-jdk17 AS build
+COPY --chown=gradle:gradle . /home/gradle/src
+WORKDIR /home/gradle/src
+RUN gradle build --no-daemon
 
-FROM fabric8/java-alpine-openjdk8-jdk
+FROM openjdk:17-alpine
 EXPOSE 7000
-COPY --from=MAVEN_TOOL_CHAIN /tmp/target/javalin-rest-1.0.jar /deployments/app.jar
+COPY --from=build /home/gradle/src/build/libs/*.jar /app/spring-boot-application.jar
+ENTRYPOINT ["java", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap", "-Djava.security.egd=file:/dev/./urandom","-jar","/app/spring-boot-application.jar"]
 ENV AB_OFF=disabled
